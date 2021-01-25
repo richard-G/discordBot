@@ -1,0 +1,6 @@
+.env
+.vscode
+
+songs/*
+
+# add more

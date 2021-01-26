@@ -23,8 +23,11 @@ python script.py
 
 This bot responds to commands sent via text channels in the server it is part of. Here are some key commands
 ```bash
+$help               # returns a list of available commands and aliases
 $join               # joins the call
 $leave              # leaves the call
 $play               # plays a random song
 $stop               # stops playing music
+$resume             # resumes music
+$pause              # pauses music
 ```

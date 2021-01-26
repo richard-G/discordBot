@@ -26,7 +26,7 @@ class track():
         self.source = source
 
     def __str__(self):
-        return f'${self.artist} - {self.name}'
+        return f'{self.artist} - {self.name}'
 
     def convert(self):
         if self.source == 'local':
@@ -122,18 +122,18 @@ async def play(ctx):
 @bot.command(name='stop')
 async def stop(ctx):
     if is_connected(ctx.guild):
-        vc = utils.get(bot.voice_clients, guild=ctx.guild)
-        if vc.is_playing():
+        vc = ctx.voice_client
+        if vc.is_playing() or vc.is_paused():
             vc.stop()
             await ctx.send('Stopped playing music.')
         else:
             await ctx.send('Nothing to stop...')
 
 
-# TODO
-@bot.command(name='help')
-async def test(ctx):
-    pass
+# # TODO
+# @bot.command(name='help')
+# async def test(ctx):
+#     pass
 
 
 @bot.command(name='join', aliases=['yo', 'summon', 'wag1'])
@@ -160,7 +160,33 @@ async def leave_call(ctx):
 # TODO
 @bot.command(name='pause')
 async def pause(ctx):
-    pass
+    if ctx.voice_client:
+        vc = ctx.voice_client
+        if vc.is_playing():
+            vc.pause()
+            await ctx.send('Paused music.')
+        elif vc.is_paused():
+            await ctx.send('Music is already paused.')
+        else:
+            await ctx.send('No music to pause.')
+    else:
+        print('NOT ctx.voice_client')
+
+
+# TODO
+@bot.command(name='resume')
+async def resume(ctx):
+    if ctx.voice_client:
+        vc = ctx.voice_client
+        if vc.is_paused():
+            vc.resume()
+            await ctx.send('Resuming music.')
+        elif vc.is_playing():
+            await ctx.send('Music is currently playing.')
+        else:
+            await ctx.send('No music to resume.')
+    else:
+        print('NOT ctx.voice_client')
 
 
 def is_now_losing(before, after):
@@ -234,8 +260,8 @@ async def play_song(ctx):
         print('playing now.. ', seconds)
         await asyncio.sleep(1)
 
-    print('finished song')
-    vc.stop()
+    # print('finished song')
+    # vc.stop()   # TODO: test
 
 
 def is_connected(guild):

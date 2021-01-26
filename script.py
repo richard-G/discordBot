@@ -109,6 +109,7 @@ async def on_member_update(before, after):
     #         print(e)
 
 
+# TODO: if music is paused then resume
 @bot.command(name='play')
 async def play(ctx):
     try:
@@ -129,9 +130,10 @@ async def stop(ctx):
             await ctx.send('Nothing to stop...')
 
 
-@bot.command(name='test')
-async def test(ctx, arg):
-    await ctx.send(arg)
+# TODO
+@bot.command(name='help')
+async def test(ctx):
+    pass
 
 
 @bot.command(name='join', aliases=['yo', 'summon', 'wag1'])
@@ -153,6 +155,12 @@ async def leave_call(ctx):
     else:
         # TODO: this is the case when bot is stopped via console and is still in disc call on startup
         await ctx.send('Not in call.')
+
+
+# TODO
+@bot.command(name='pause')
+async def pause(ctx):
+    pass
 
 
 def is_now_losing(before, after):

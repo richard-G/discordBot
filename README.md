@@ -1,6 +1,6 @@
 # Discord Music Bot
 
-This is a bot developed for discord with various functionalities largely relating to music.
+A bot developed for discord with various functionalities largely relating to music.
 
 ## Dependencies
 

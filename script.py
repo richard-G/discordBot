@@ -25,8 +25,8 @@ class track():
         self.path = path
         self.source = source
 
-    def __str__(self):
-        return f'{self.artist} - {self.name}'
+    # def __str__(self):
+    #     return f'{self.artist} - {self.name}'
 
     def convert(self):
         if self.source == 'local':

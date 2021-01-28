@@ -13,9 +13,14 @@ bot = commands.Bot(intents=intents, command_prefix='$')
 
 # TODO: make dictionary of commands to return
 # eg. "NotInCall", "NotInVoiceChannel"
-
+responses = {
+    not_in_call: 'You must be in a call to use this command.',
+    different_voice_channel: 'You must be in the same voice channel as me to use this command.'
+}
 
 # TODO: move this to class dir?
+
+
 class CurrentlyPlayingError(Exception):
     pass
 
@@ -60,11 +65,6 @@ async def on_member_update(before, after):
         return
 
     try:
-        # TODO: not working
-        # ctx = await bot.get_context(before)
-        v_channel = before.voice.channel
-        # await play_song(ctx)
-        # TODO: check user is in a voice call
         if not before.voice:
             return
         else:
@@ -77,80 +77,29 @@ async def on_member_update(before, after):
     except Exception as e:
         print('something went wrong... ', e)
 
-    # # TODO: remove after testing
-    # for activity_0 in before.activities:
-    #     if activity_0.name == 'Rocket League':
-    #         break
-    # else:
-    #     return
-
-    # for activity_1 in after.activities:
-    #     if activity_1.name == 'Rocket League':
-    #         break
-    # else:
-    #     return
-
-    # print('activity state: ', activity_1.state)
-
-    # # TODO: test - probably not needed now as we're testing for activity first
-    # if not hasattr(activity_0, 'state'):
-    #     return
-
-    # score_0 = activity_0.state.split()[1]
-    # score_1 = activity_1.state.split()[1]
-
-    # if is_now_losing(score_0, score_1):
-    #     try:
-    #         # TODO: get context here - make sure text channel and voice channel exist on the object else give default val
-    #         ctx = await bot.get_context(before)
-    #         await play_song(ctx)
-    #         # messy, maybe get from user object?  TODO: replace guild and text_channel with ctx
-    #         guild = bot.guilds[0]
-    #         text_channel = guild.text_channels[0]
-    #         await text_channel.send('let\'s gooo!')
-    #     except CurrentlyPlayingError:
-    #         print('inside CurrentlyPlayingError block for on_member_update')
-    #     except Exception as e:
-    #         print('something went wrong...')
-    #         print(e)
-
 
 # TODO: if music is paused then resume
 @bot.command(name='play')
 async def play(ctx):
-    # try:
-    #     await play_song(ctx)
-    # except CurrentlyPlayingError:
-    #     # will probably add it to queue
-    #     await ctx.send('Already playing music...')
-
-    # check that member making command is in a voice channel
-    # member = ctx.author
-    # if member.voice:
-    #     v_channel = member.voice.channel
-    # else:
-    #     await ctx.send('You must be in a voice channel to use this command.')
-    #     return
-
     # check that member making command is in a voice channel
     member = ctx.author
     if member.voice:
+        |
         v_channel = member.voice.channel
         # check if bot has an active voice client in the guild
         if utils.get(bot.voice_clients, guild=ctx.guild):
             # check if bot is in same voice channel as the caller
             if not utils.get(bot.voice_clients, channel=v_channel):
-                await ctx.send('You must be in the same voice channel as me to use this command.')
+                await ctx.send(responses.different_voice_channel)
                 return
             else:
                 vc = utils.get(bot.voice_clients, channel=v_channel)
         else:
             # await ctx.send('I\'m not in a voice channel, type `$join` to get me in one.')
             vc = await v_channel.connect()
-            # might need vc object here
 
     else:
-        await ctx.send('You must be in a voice channel to use this command.')
+        await ctx.send(responses.not_in_call)
         return
 
     try:
@@ -172,44 +121,16 @@ async def stop(ctx):
         if utils.get(bot.voice_clients, guild=ctx.guild):
             # check if bot is in same voice channel as the caller
             if not utils.get(bot.voice_clients, channel=v_channel):
-                await ctx.send('You must be in the same voice channel as me to use this command.')
+                await ctx.send(responses.different_voice_channel)
                 return
         else:
             await ctx.send('I\'m not in a voice channel, type `$join` to get me in one.')
             return
-
     else:
-        await ctx.send('You must be in a voice channel to use this command.')
+        await ctx.send(responses.different_voice_channel)
         return
 
     vc = utils.get(bot.voice_clients, channel=v_channel)
-
-    # # TODO:
-    # if not is_connected(v_channel):
-    #     print('connecting to voice channel..')
-    #     try:
-
-    #         vc = await v_channel.connect()
-    #     except Exception as e:
-    #         # TODO: messy, check ensure exception is ClientException at least
-    #         # met if bot is in a different voice channel to the caller
-    #         print('ClientException: ', e)
-    #         raise WrongVoiceChannel
-
-    # else:
-    #     # vc = utils.get(bot.voice_clients, guild=guild)
-    #     vc = utils.get(bot.voice_clients, channel=v_channel)
-    #     print('already connected to channel')
-
-    # if is_connected(v_channel):
-    #     # TODO: probably an if statement here
-    #     vc = utils.get(bot.voice_clients, channel=v_channel)
-    #     # if not vc?
-    #     if vc.is_playing() or vc.is_paused():
-    #         vc.stop()
-    #         await ctx.send('Stopped playing music.')
-    #     else:
-    #         await ctx.send('Nothing to stop...')
 
     if vc.is_playing() or vc.is_paused():
         vc.stop()
@@ -217,18 +138,12 @@ async def stop(ctx):
     else:
         await ctx.send('Nothing to stop...')
 
-
-# # TODO
-# @bot.command(name='help')
-# async def test(ctx):
-#     pass
-
 # TODO: test
 @bot.command(name='join', aliases=['yo', 'summon', 'wag1'])
 async def join_call(ctx):
     member = ctx.author
     if not member.voice:
-        await ctx.send('You must be in a voice call to use this command.')
+        await ctx.send(responses.not_in_call)
         return
 
     v_channel = member.voice.channel
@@ -240,27 +155,18 @@ async def join_call(ctx):
     elif utils.get(bot.voice_clients, guild=ctx.guild):
         # case where bot is in another call on the server
         # TODO: decide what to do here, either refuse command or leave curr voice channel to join new one
-        # TODO: this fails, need to disconnect from old channel first
-        # await v_channel.connect()
         await ctx.send('Already in another call.')
         return
 
     await v_channel.connect()
     await ctx.send('Joined call.')
 
-    # if not is_connected(ctx.guild):
-    #     vc = ctx.guild.voice_channels[0]        # TODO: generalise this?
-    #     await vc.connect()
-    #     await ctx.send('Joined call.')
-    # else:
-    #     await ctx.send('Already in call...')
-
 
 @bot.command(name='leave', aliases=['bb', 'fo', 'bye'])
 async def leave_call(ctx):
     # TODO: fix this
     if not ctx.author.voice:
-        await ctx.send('You must be in a voice call to make this commmand.')
+        await ctx.send(responses.not_in_call)
 
     if is_connected(ctx.author.voice.channel):
         vc = utils.get(bot.voice_clients, guild=ctx.guild)
@@ -316,6 +222,10 @@ def is_now_losing(before, after):
         print('this condition should never be met (not rl_0 and rl_1)')
         return False
 
+    # case where rocket league rich presence isn't in state
+    if not len(rl_0.state.split()) == 3:
+        return False
+
     # extract scores from rl activities
     score_0 = rl_0.state.split()[1]
     score_1 = rl_1.state.split()[1]
@@ -330,7 +240,6 @@ def is_now_losing(before, after):
 
     # case where we are now winning
     if int(score_1.split(':')[0]) > int(score_1.split(':')[1]):
-        print('we scored!')
         return False
 
     return True
@@ -343,30 +252,7 @@ def is_playing_rl(before, after):
 
 async def play_song(vc):
     # takes as argument the voice client to play music to
-    # TODO: change input arg to vc - test
     print('H Y P E')
-
-    # TODO: generalise this, pass in as ctx arg from parent
-    # guild = ctx.guild
-    # vc1 = guild.voice_channels[0]
-    # text_channel = guild.text_channels[0]
-
-    # # TODO: move to caller function
-    # # TODO: additional condition: AND not connected to another channel
-    # if not is_connected(v_channel):
-    #     print('connecting to voice channel..')
-    #     try:
-
-    #         vc = await v_channel.connect()
-    #     except Exception as e:
-    #         # TODO: messy, check ensure exception is ClientException at least
-    #         print('ClientException: ', e)
-    #         raise WrongVoiceChannel
-
-    # else:
-    #     # vc = utils.get(bot.voice_clients, guild=guild)
-    #     vc = utils.get(bot.voice_clients, channel=v_channel)
-    #     print('already connected to channel')
 
     if not vc:
         print('shouldn\'t get here...')
@@ -381,13 +267,6 @@ async def play_song(vc):
 
     vc.play(audio_source)
 
-    # # TODO: check this works if invoked from on_member_update evt, probably won't because no channel is given
-    # if ctx.message.channel:
-    #     await ctx.send('Playing now. :fire:')
-    # else:
-    #     # should only get in here if song is auto played (via rocket league score)
-    #     print('ctx.message.channel did not exist.')
-
     seconds = 0
     while vc.is_playing():
         seconds += 1
@@ -396,20 +275,7 @@ async def play_song(vc):
 
 
 def is_connected(v_channel):
-    # TODO: rewrite to take arg voice_channel, check if bot is connected to same one
-    # vc = utils.get(bot.voice_clients, guild=guild)
-    # return vc and vc.is_connected
-
-    # vc = utils.get(bot.voice_clients, voice_channel=v_channel)
-
-    # TODO: test
-    # vc = utils.find(lambda x: x.channel == v_channel, bot.voice_clients)
-
     vc = utils.get(bot.voice_clients, channel=v_channel)
-    if vc:
-        print('found voice channel')
-        print('voice client: ', vc)
-        print('voice channel: ', v_channel)
 
     return vc and vc.is_connected
 

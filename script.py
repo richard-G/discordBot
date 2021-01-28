@@ -11,12 +11,19 @@ intents = Intents.all()
 bot = commands.Bot(intents=intents, command_prefix='$')
 
 
+# TODO: make dictionary of commands to return
+# eg. "NotInCall", "NotInVoiceChannel"
+
+
 # TODO: move this to class dir?
 class CurrentlyPlayingError(Exception):
     pass
 
 
-# TODO
+class WrongVoiceChannel(Exception):
+    pass
+
+
 class track():
     def __init__(self, name, artist, path, source):
         self.name = name
@@ -53,8 +60,18 @@ async def on_member_update(before, after):
         return
 
     try:
-        ctx = await bot.get_context(before)
-        await play_song(ctx)
+        # TODO: not working
+        # ctx = await bot.get_context(before)
+        v_channel = before.voice.channel
+        # await play_song(ctx)
+        # TODO: check user is in a voice call
+        if not before.voice:
+            return
+        else:
+            v_channel = before.voice.channel
+            # TODO: don't try to join voice channel if already in
+            vc = await v_channel.connect()
+        await play_song(vc)
     except CurrentlyPlayingError:
         print('inside CurrentlyPlayingError exception')
     except Exception as e:
@@ -101,22 +118,104 @@ async def on_member_update(before, after):
 # TODO: if music is paused then resume
 @bot.command(name='play')
 async def play(ctx):
+    # try:
+    #     await play_song(ctx)
+    # except CurrentlyPlayingError:
+    #     # will probably add it to queue
+    #     await ctx.send('Already playing music...')
+
+    # check that member making command is in a voice channel
+    # member = ctx.author
+    # if member.voice:
+    #     v_channel = member.voice.channel
+    # else:
+    #     await ctx.send('You must be in a voice channel to use this command.')
+    #     return
+
+    # check that member making command is in a voice channel
+    member = ctx.author
+    if member.voice:
+        v_channel = member.voice.channel
+        # check if bot has an active voice client in the guild
+        if utils.get(bot.voice_clients, guild=ctx.guild):
+            # check if bot is in same voice channel as the caller
+            if not utils.get(bot.voice_clients, channel=v_channel):
+                await ctx.send('You must be in the same voice channel as me to use this command.')
+                return
+            else:
+                vc = utils.get(bot.voice_clients, channel=v_channel)
+        else:
+            # await ctx.send('I\'m not in a voice channel, type `$join` to get me in one.')
+            vc = await v_channel.connect()
+            # might need vc object here
+
+    else:
+        await ctx.send('You must be in a voice channel to use this command.')
+        return
+
     try:
-        await play_song(ctx)
+        await play_song(vc)
     except CurrentlyPlayingError:
-        # will probably add it to queue
-        await ctx.send('Already playing music...')
+        # probably add song to queue here in future
+        await ctx.send('Already playing music.')
+        return
 
 
 @bot.command(name='stop')
 async def stop(ctx):
-    if is_connected(ctx.guild):
-        vc = ctx.voice_client
-        if vc.is_playing() or vc.is_paused():
-            vc.stop()
-            await ctx.send('Stopped playing music.')
+
+    # check that member making command is in a voice channel
+    member = ctx.author
+    if member.voice:
+        v_channel = member.voice.channel
+        # check if bot has an active voice client in the guild
+        if utils.get(bot.voice_clients, guild=ctx.guild):
+            # check if bot is in same voice channel as the caller
+            if not utils.get(bot.voice_clients, channel=v_channel):
+                await ctx.send('You must be in the same voice channel as me to use this command.')
+                return
         else:
-            await ctx.send('Nothing to stop...')
+            await ctx.send('I\'m not in a voice channel, type `$join` to get me in one.')
+            return
+
+    else:
+        await ctx.send('You must be in a voice channel to use this command.')
+        return
+
+    vc = utils.get(bot.voice_clients, channel=v_channel)
+
+    # # TODO:
+    # if not is_connected(v_channel):
+    #     print('connecting to voice channel..')
+    #     try:
+
+    #         vc = await v_channel.connect()
+    #     except Exception as e:
+    #         # TODO: messy, check ensure exception is ClientException at least
+    #         # met if bot is in a different voice channel to the caller
+    #         print('ClientException: ', e)
+    #         raise WrongVoiceChannel
+
+    # else:
+    #     # vc = utils.get(bot.voice_clients, guild=guild)
+    #     vc = utils.get(bot.voice_clients, channel=v_channel)
+    #     print('already connected to channel')
+
+    # if is_connected(v_channel):
+    #     # TODO: probably an if statement here
+    #     vc = utils.get(bot.voice_clients, channel=v_channel)
+    #     # if not vc?
+    #     if vc.is_playing() or vc.is_paused():
+    #         vc.stop()
+    #         await ctx.send('Stopped playing music.')
+    #     else:
+    #         await ctx.send('Nothing to stop...')
+
+    if vc.is_playing() or vc.is_paused():
+        vc.stop()
+        await ctx.send('Stopped playing music.')
+    else:
+        await ctx.send('Nothing to stop...')
 
 
 # # TODO
@@ -124,20 +223,46 @@ async def stop(ctx):
 # async def test(ctx):
 #     pass
 
-
+# TODO: test
 @bot.command(name='join', aliases=['yo', 'summon', 'wag1'])
 async def join_call(ctx):
-    if not is_connected(ctx.guild):
-        vc = ctx.guild.voice_channels[0]        # TODO: generalise this?
-        await vc.connect()
-        await ctx.send('Joined call.')
-    else:
-        await ctx.send('Already in call...')
+    member = ctx.author
+    if not member.voice:
+        await ctx.send('You must be in a voice call to use this command.')
+        return
+
+    v_channel = member.voice.channel
+
+    if utils.get(bot.voice_clients, channel=v_channel):
+        # case where bot is already in same voice call as caller
+        await ctx.send('Already in call.')
+        return
+    elif utils.get(bot.voice_clients, guild=ctx.guild):
+        # case where bot is in another call on the server
+        # TODO: decide what to do here, either refuse command or leave curr voice channel to join new one
+        # TODO: this fails, need to disconnect from old channel first
+        # await v_channel.connect()
+        await ctx.send('Already in another call.')
+        return
+
+    await v_channel.connect()
+    await ctx.send('Joined call.')
+
+    # if not is_connected(ctx.guild):
+    #     vc = ctx.guild.voice_channels[0]        # TODO: generalise this?
+    #     await vc.connect()
+    #     await ctx.send('Joined call.')
+    # else:
+    #     await ctx.send('Already in call...')
 
 
 @bot.command(name='leave', aliases=['bb', 'fo', 'bye'])
 async def leave_call(ctx):
-    if is_connected(ctx.guild):
+    # TODO: fix this
+    if not ctx.author.voice:
+        await ctx.send('You must be in a voice call to make this commmand.')
+
+    if is_connected(ctx.author.voice.channel):
         vc = utils.get(bot.voice_clients, guild=ctx.guild)
         await vc.disconnect()
         await ctx.send('Left call.')
@@ -149,6 +274,7 @@ async def leave_call(ctx):
 # TODO
 @bot.command(name='pause')
 async def pause(ctx):
+    # TODO: check caller is in same voice call as the bot
     if ctx.voice_client:
         vc = ctx.voice_client
         if vc.is_playing():
@@ -165,6 +291,7 @@ async def pause(ctx):
 # TODO
 @bot.command(name='resume')
 async def resume(ctx):
+    # TODO: check caller is in same voice call as the bot
     if ctx.voice_client:
         vc = ctx.voice_client
         if vc.is_paused():
@@ -214,20 +341,37 @@ def is_playing_rl(before, after):
     return any(activity.name == 'Rocket League' for activity in before.activities) and any(activity.name == 'Rocket League' for activity in after.activities)
 
 
-async def play_song(ctx):
+async def play_song(vc):
+    # takes as argument the voice client to play music to
+    # TODO: change input arg to vc - test
     print('H Y P E')
 
     # TODO: generalise this, pass in as ctx arg from parent
-    guild = ctx.guild
-    vc1 = guild.voice_channels[0]
-    text_channel = guild.text_channels[0]
+    # guild = ctx.guild
+    # vc1 = guild.voice_channels[0]
+    # text_channel = guild.text_channels[0]
 
-    if not is_connected(guild):
-        print('connecting to voice channel..')
-        vc = await vc1.connect()
-    else:
-        vc = utils.get(bot.voice_clients, guild=guild)
-        print('already connected to channel')
+    # # TODO: move to caller function
+    # # TODO: additional condition: AND not connected to another channel
+    # if not is_connected(v_channel):
+    #     print('connecting to voice channel..')
+    #     try:
+
+    #         vc = await v_channel.connect()
+    #     except Exception as e:
+    #         # TODO: messy, check ensure exception is ClientException at least
+    #         print('ClientException: ', e)
+    #         raise WrongVoiceChannel
+
+    # else:
+    #     # vc = utils.get(bot.voice_clients, guild=guild)
+    #     vc = utils.get(bot.voice_clients, channel=v_channel)
+    #     print('already connected to channel')
+
+    if not vc:
+        print('shouldn\'t get here...')
+        print('play_song called without a voice client')
+        return
 
     if vc.is_playing():
         raise CurrentlyPlayingError()
@@ -237,12 +381,12 @@ async def play_song(ctx):
 
     vc.play(audio_source)
 
-    # TODO: check this works if invoked from on_member_update evt, probably won't because no channel is given
-    if ctx.message.channel:
-        await ctx.send('Playing now. :fire:')
-    else:
-        # should only get in here if song is auto played (via rocket league score)
-        print('ctx.message.channel did not exist.')
+    # # TODO: check this works if invoked from on_member_update evt, probably won't because no channel is given
+    # if ctx.message.channel:
+    #     await ctx.send('Playing now. :fire:')
+    # else:
+    #     # should only get in here if song is auto played (via rocket league score)
+    #     print('ctx.message.channel did not exist.')
 
     seconds = 0
     while vc.is_playing():
@@ -250,12 +394,23 @@ async def play_song(ctx):
         print('playing now.. ', seconds)
         await asyncio.sleep(1)
 
-    # print('finished song')
-    # vc.stop()   # TODO: test
 
+def is_connected(v_channel):
+    # TODO: rewrite to take arg voice_channel, check if bot is connected to same one
+    # vc = utils.get(bot.voice_clients, guild=guild)
+    # return vc and vc.is_connected
 
-def is_connected(guild):
-    vc = utils.get(bot.voice_clients, guild=guild)
+    # vc = utils.get(bot.voice_clients, voice_channel=v_channel)
+
+    # TODO: test
+    # vc = utils.find(lambda x: x.channel == v_channel, bot.voice_clients)
+
+    vc = utils.get(bot.voice_clients, channel=v_channel)
+    if vc:
+        print('found voice channel')
+        print('voice client: ', vc)
+        print('voice channel: ', v_channel)
+
     return vc and vc.is_connected
 
 

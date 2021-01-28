@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 intents = Intents.all()
-# TODO: check this still works with on_member_update in getting rich text
 bot = commands.Bot(intents=intents, command_prefix='$')
 
 
@@ -25,8 +24,8 @@ class track():
         self.path = path
         self.source = source
 
-    # def __str__(self):
-    #     return f'{self.artist} - {self.name}'
+    def __str__(self):
+        return f'{self.artist} - {self.name}'
 
     def convert(self):
         if self.source == 'local':
@@ -45,21 +44,11 @@ async def on_ready():
 @bot.event
 async def on_member_update(before, after):
     if before.name == bot.user:
-        # TODO: test if this condition is ever met
-        print('on_member_update called on bot')
         return
 
-    # unused
-    # if before.name != 'Rich':  # TODO: or rl not in activities
-    #     print(before.name)
-    #     print('returning..')
-    #     return
-
-    # TODO: test
     if not is_playing_rl(before, after):
         return
 
-    # TODO: test
     if not is_now_losing(before, after):
         return
 
@@ -221,6 +210,7 @@ def is_now_losing(before, after):
 
 
 def is_playing_rl(before, after):
+    # TODO: check here or to check rl state is using rich presence
     return any(activity.name == 'Rocket League' for activity in before.activities) and any(activity.name == 'Rocket League' for activity in after.activities)
 
 

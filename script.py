@@ -11,12 +11,12 @@ intents = Intents.all()
 bot = commands.Bot(intents=intents, command_prefix='$')
 
 
-# TODO: make dictionary of commands to return
-# eg. "NotInCall", "NotInVoiceChannel"
-responses = {
-    not_in_call: 'You must be in a call to use this command.',
-    different_voice_channel: 'You must be in the same voice channel as me to use this command.'
-}
+class Response():
+    not_in_call = 'You must be in a call to use this command,'
+    different_voice_channel = 'You must be in the same voice channel as me to use this command.'
+
+    # TODO: create method for smart responses eg. playing {artist} - {song}.
+
 
 # TODO: move this to class dir?
 
@@ -84,13 +84,12 @@ async def play(ctx):
     # check that member making command is in a voice channel
     member = ctx.author
     if member.voice:
-        |
         v_channel = member.voice.channel
         # check if bot has an active voice client in the guild
         if utils.get(bot.voice_clients, guild=ctx.guild):
             # check if bot is in same voice channel as the caller
             if not utils.get(bot.voice_clients, channel=v_channel):
-                await ctx.send(responses.different_voice_channel)
+                await ctx.send(Response.different_voice_channel)
                 return
             else:
                 vc = utils.get(bot.voice_clients, channel=v_channel)
@@ -99,7 +98,7 @@ async def play(ctx):
             vc = await v_channel.connect()
 
     else:
-        await ctx.send(responses.not_in_call)
+        await ctx.send(Response.not_in_call)
         return
 
     try:
@@ -121,13 +120,13 @@ async def stop(ctx):
         if utils.get(bot.voice_clients, guild=ctx.guild):
             # check if bot is in same voice channel as the caller
             if not utils.get(bot.voice_clients, channel=v_channel):
-                await ctx.send(responses.different_voice_channel)
+                await ctx.send(Response.different_voice_channel)
                 return
         else:
             await ctx.send('I\'m not in a voice channel, type `$join` to get me in one.')
             return
     else:
-        await ctx.send(responses.different_voice_channel)
+        await ctx.send(Response.different_voice_channel)
         return
 
     vc = utils.get(bot.voice_clients, channel=v_channel)
@@ -143,7 +142,7 @@ async def stop(ctx):
 async def join_call(ctx):
     member = ctx.author
     if not member.voice:
-        await ctx.send(responses.not_in_call)
+        await ctx.send(Response.not_in_call)
         return
 
     v_channel = member.voice.channel
@@ -166,7 +165,7 @@ async def join_call(ctx):
 async def leave_call(ctx):
     # TODO: fix this
     if not ctx.author.voice:
-        await ctx.send(responses.not_in_call)
+        await ctx.send(Response.not_in_call)
 
     if is_connected(ctx.author.voice.channel):
         vc = utils.get(bot.voice_clients, guild=ctx.guild)

@@ -64,18 +64,32 @@ async def on_member_update(before, after):
     if not is_now_losing(before, after):
         return
 
-    try:
-        if not before.voice:
-            return
+    # check that member making command is in a voice channel
+    # TODO: generalise this logic to put into a helper function - used to ensure bot is in same channel as user with flag arg for "join if not in a call" case
+    # TODO: test
+    member = before
+    if member.voice:
+        v_channel = member.voice.channel
+        # check if bot has an active voice client in the guild
+        if utils.get(bot.voice_clients, guild=member.guild):
+            # check if bot is in same voice channel as the caller
+            if not utils.get(bot.voice_clients, channel=v_channel):
+                return
+            else:
+                vc = utils.get(bot.voice_clients, channel=v_channel)
         else:
-            v_channel = before.voice.channel
-            # TODO: don't try to join voice channel if already in
             vc = await v_channel.connect()
+    else:
+        return
+
+    # got voice client, now call play_song
+    # TODO: test
+    try:
         await play_song(vc)
     except CurrentlyPlayingError:
         print('inside CurrentlyPlayingError exception')
     except Exception as e:
-        print('something went wrong... ', e)
+        print('something went wrong... e: ', e)
 
 
 # TODO: if music is paused then resume
@@ -220,6 +234,8 @@ def is_now_losing(before, after):
     if not rl_0 and rl_1:
         print('this condition should never be met (not rl_0 and rl_1)')
         return False
+
+    # TODO: check what state looks like in OT, return false if game just ended in OT as a loss
 
     # case where rocket league rich presence isn't in state
     if not len(rl_0.state.split()) == 3:

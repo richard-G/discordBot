@@ -14,6 +14,8 @@ A new discord application must first be created in the Discord Developer Portal 
 
 This can be done [here](https://discord.com/developers/applications).
 
+This app also allows for integration with Rocket League. To do so, change the `rl_integration` value to `True` in the `.env` file.
+
 After following steps in the Developer Portal to add the bot into a server, the bot can be activated by running the following command in a terminal at the root of this project.
 ```bash
 python script.py

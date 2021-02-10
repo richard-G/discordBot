@@ -10,6 +10,12 @@ TOKEN = os.getenv('TOKEN')
 intents = Intents.all()
 bot = commands.Bot(intents=intents, command_prefix='$')
 
+# get integration config from .env, and convert from str to bool
+if os.getenv('rl_integration') == 'True':
+    rl_integration = True
+else:
+    rl_integration = False
+
 
 class Response():
     not_in_call = 'You must be in a call to use this command,'
@@ -55,41 +61,42 @@ async def on_ready():
 
 @bot.event
 async def on_member_update(before, after):
-    if before.name == bot.user:
-        return
+    if rl_integration:
+        if before.name == bot.user:
+            return
 
-    if not is_playing_rl(before, after):
-        return
+        if not is_playing_rl(before, after):
+            return
 
-    if not is_now_losing(before, after):
-        return
+        if not is_now_losing(before, after):
+            return
 
-    # check that member making command is in a voice channel
-    # TODO: generalise this logic to put into a helper function - used to ensure bot is in same channel as user with flag arg for "join if not in a call" case
-    # TODO: test
-    member = before
-    if member.voice:
-        v_channel = member.voice.channel
-        # check if bot has an active voice client in the guild
-        if utils.get(bot.voice_clients, guild=member.guild):
-            # check if bot is in same voice channel as the caller
-            if not utils.get(bot.voice_clients, channel=v_channel):
-                return
+        # check that member making command is in a voice channel
+        # TODO: generalise this logic to put into a helper function - used to ensure bot is in same channel as user with flag arg for "join if not in a call" case
+        # TODO: test
+        member = before
+        if member.voice:
+            v_channel = member.voice.channel
+            # check if bot has an active voice client in the guild
+            if utils.get(bot.voice_clients, guild=member.guild):
+                # check if bot is in same voice channel as the caller
+                if not utils.get(bot.voice_clients, channel=v_channel):
+                    return
+                else:
+                    vc = utils.get(bot.voice_clients, channel=v_channel)
             else:
-                vc = utils.get(bot.voice_clients, channel=v_channel)
+                vc = await v_channel.connect()
         else:
-            vc = await v_channel.connect()
-    else:
-        return
+            return
 
-    # got voice client, now call play_song
-    # TODO: test
-    try:
-        await play_song(vc)
-    except CurrentlyPlayingError:
-        print('inside CurrentlyPlayingError exception')
-    except Exception as e:
-        print('something went wrong... e: ', e)
+        # got voice client, now call play_song
+        # TODO: test
+        try:
+            await play_song(vc)
+        except CurrentlyPlayingError:
+            print('inside CurrentlyPlayingError exception')
+        except Exception as e:
+            print('something went wrong... e: ', e)
 
 
 # TODO: if music is paused then resume

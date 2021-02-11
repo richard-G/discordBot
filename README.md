@@ -33,3 +33,13 @@ $stop               # stops playing music
 $resume             # resumes music
 $pause              # pauses music
 ```
+
+
+## TODO
+
+This is a WIP. Some features to be added are:
+- Youtube integration
+- Queue functionality
+- Spotify integration
+- Hearthstone integration
+- Ability to clear chat history of all commands
